@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LeafDetect – Cotton Disease Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="On-device cotton leaf disease detection powered by MobileNetV2 and TensorFlow.js">
+  <meta name="theme-color" content="#16a34a">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles/main.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Hero Header -->
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="18" cy="18" rx="14" ry="11" fill="#86efac" stroke="#16a34a" stroke-width="2.2" transform="rotate(-35 18 18)"/>
+          <line x1="8" y1="28" x2="28" y2="8" stroke="#15803d" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18" y1="18" x2="13" y2="23" stroke="#15803d" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="18" y1="18" x2="23" y2="13" stroke="#15803d" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="hero-brand">LeafDetect</span>
+      </div>
+      <p class="hero-subtitle">Cotton Leaf Disease Scanner &mdash; 100% on-device &amp; private</p>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Status Banner -->
+    <div id="statusBanner" class="status-banner loading">
+      <span class="status-dot"></span>
+      <span id="statusText">Loading AI model&hellip;</span>
+    </div>
+
+    <!-- Upload Card -->
+    <section class="card">
+      <div class="card-header">
+        <div class="step-badge">1</div>
+        <h2>Upload a leaf image</h2>
+      </div>
+      <p class="card-desc">Choose a clear, close-up photo of a single cotton leaf. The model runs entirely in your browser — no data leaves your device.</p>
+
+      <label for="fileInput" class="upload-zone" id="uploadZone">
+        <div class="upload-icon-wrap">
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#16a34a" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+          </svg>
+        </div>
+        <p class="upload-title">Click to upload or drag &amp; drop</p>
+        <p class="upload-hint">PNG, JPG, WEBP &bull; Any size</p>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+      </label>
+
+      <!-- Preview -->
+      <div id="previewWrap" class="preview-wrap hidden">
+        <img id="leafImg" src="" alt="Leaf preview" class="preview-img">
+        <button id="clearBtn" class="clear-btn" title="Remove image">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <button id="analyzeBtn" class="primary-btn" disabled>
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .23 2.71-1.17 2.71H3.968c-1.4 0-2.17-1.71-1.17-2.71L4.2 15.3"/>
+        </svg>
+        <span>Analyze Leaf</span>
+      </button>
+    </section>
+
+    <!-- Results Card -->
+    <section class="card" id="resultsCard">
+      <div class="card-header">
+        <div class="step-badge">2</div>
+        <h2>Detection Result</h2>
+      </div>
+
+      <!-- Idle state -->
+      <div id="resultIdle" class="result-idle">
+        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#d1d5db" stroke-width="1.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .23 2.71-1.17 2.71H3.968c-1.4 0-2.17-1.71-1.17-2.71L4.2 15.3"/>
+        </svg>
+        <p>Upload an image and click <strong>Analyze Leaf</strong> to see results here.</p>
+      </div>
+
+      <!-- Analyzing spinner -->
+      <div id="resultSpinner" class="result-spinner hidden">
+        <div class="spinner"></div>
+        <p>Running inference&hellip;</p>
+      </div>
+
+      <!-- Result output -->
+      <div id="resultOutput" class="result-output hidden">
+        <div class="result-top">
+          <div id="resultIcon" class="result-icon"></div>
+          <div>
+            <p class="result-label-text">Detected</p>
+            <p id="resultLabel" class="result-label"></p>
+          </div>
+          <div class="result-conf-wrap">
+            <p class="result-conf-label">Confidence</p>
+            <p id="resultConf" class="result-conf"></p>
+          </div>
+        </div>
+
+        <div class="confidence-bars" id="confidenceBars"></div>
+      </div>
+
+      <!-- Error state -->
+      <div id="resultError" class="result-error hidden">
+        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+        </svg>
+        <p id="resultErrorMsg">Something went wrong. Please try again.</p>
+      </div>
+    </section>
+
+    <!-- Info Card -->
+    <section class="card info-card">
+      <h3 class="info-title">How it works</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-icon">🧠</span>
+          <div>
+            <strong>MobileNetV2 Model</strong>
+            <p>Trained on the SAR-CLD-2024 cotton leaf disease dataset for 4-class classification.</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">🔒</span>
+          <div>
+            <strong>100% Private</strong>
+            <p>All inference runs in your browser via TensorFlow.js. No images are uploaded to any server.</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">📱</span>
+          <div>
+            <strong>Works Offline</strong>
+            <p>Install as a PWA for offline access. The model is cached after the first load.</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <span class="info-icon">🌿</span>
+          <div>
+            <strong>4 Classes</strong>
+            <p>Diseased leaf, Diseased plant, Fresh leaf, Fresh plant.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>LeafDetect &bull; USM VR &amp; Multispectral Drone Lab &bull; Prototype v1.0</p>
+  </footer>
+
+  <script src="scripts/tf.min.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>
