@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Plant Triage – Disease Outbreak Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-50:  #f0fdf4;
+      --green-100: #dcfce7;
+      --green-200: #bbf7d0;
+      --green-600: #16a34a;
+      --green-700: #15803d;
+      --green-800: #166534;
+      --red-50:    #fef2f2;
+      --red-100:   #fee2e2;
+      --red-400:   #f87171;
+      --red-500:   #ef4444;
+      --red-600:   #dc2626;
+      --gray-50:   #f9fafb;
+      --gray-100:  #f3f4f6;
+      --gray-200:  #e5e7eb;
+      --gray-300:  #d1d5db;
+      --gray-400:  #9ca3af;
+      --gray-500:  #6b7280;
+      --gray-600:  #4b5563;
+      --gray-700:  #374151;
+      --gray-800:  #1f2937;
+      --gray-900:  #111827;
+      --radius-md: 0.875rem;
+      --radius-lg: 1.25rem;
+      --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.04);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: #f0fdf4;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(22,163,74,.13) 0%, transparent 70%),
+        linear-gradient(180deg, #f0fdf4 0%, #f9fafb 100%);
+      min-height: 100vh;
+      color: var(--gray-900);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Hero ---- */
+    .hero {
+      background: linear-gradient(135deg, #15803d 0%, #166534 50%, #14532d 100%);
+      padding: 2.25rem 1.5rem 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,.07) 0%, transparent 50%),
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,.05) 0%, transparent 40%);
+    }
+    .hero-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      text-align: center;
+      position: relative;
+    }
+    .hero-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .hero-brand {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .hero-subtitle {
+      color: rgba(255,255,255,.78);
+      font-size: 0.95rem;
+    }
+
+    /* ---- Main ---- */
+    .main-content {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+    }
+
+    /* ---- Stats row ---- */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(0,0,0,.05);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-500);
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      line-height: 1;
+    }
+
+    .stat-value.red  { color: var(--red-600); }
+    .stat-value.green { color: var(--green-700); }
+
+    /* ---- Map card ---- */
+    .map-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.5rem 1.75rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(0,0,0,.05);
+    }
+
+    .map-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .map-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    .disease-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .disease-select-wrap label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      white-space: nowrap;
+    }
+
+    .form-select {
+      padding: 0.55rem 2.25rem 0.55rem 0.85rem;
+      border-radius: var(--radius-md);
+      border: 1.5px solid var(--gray-200);
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.6rem center;
+      min-width: 200px;
+    }
+
+    .form-select:focus {
+      outline: none;
+      border-color: var(--green-600);
+      box-shadow: 0 0 0 3px rgba(22,163,74,.12);
+    }
+
+    /* ---- Legend ---- */
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      margin-bottom: 0.85rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      color: var(--gray-600);
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-dot.gray { background: var(--gray-300); }
+    .legend-dot.red  { background: var(--red-500); }
+    .legend-dot.dark { background: #991b1b; }
+
+    /* ---- Map ---- */
+    #map {
+      height: 520px;
+      border-radius: var(--radius-md);
+      z-index: 0;
+      border: 1px solid var(--gray-200);
+    }
+
+    /* ---- Status bar ---- */
+    .map-status {
+      margin-top: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      color: var(--gray-600);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 2.2rem;
+    }
+
+    /* ---- Reports table ---- */
+    .table-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(0,0,0,.05);
+      margin-top: 1.25rem;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .table-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+
+    .badge-count {
+      background: var(--red-50);
+      color: var(--red-600);
+      border: 1px solid var(--red-100);
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead tr {
+      border-bottom: 2px solid var(--gray-100);
+    }
+
+    th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-500);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--gray-100);
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: var(--gray-50); }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 0.6rem 0.75rem;
+      color: var(--gray-700);
+    }
+
+    .disease-pill {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--red-50);
+      color: var(--red-600);
+    }
+
+    .disease-pill.healthy {
+      background: var(--green-50);
+      color: var(--green-700);
+    }
+
+    .empty-state {
+      padding: 2.5rem 1rem;
+      text-align: center;
+      color: var(--gray-400);
+      font-size: 0.9rem;
+    }
+
+    /* ---- Footer ---- */
+    .footer {
+      text-align: center;
+      padding: 1.5rem 1rem 2rem;
+      font-size: 0.78rem;
+      color: var(--gray-400);
+    }
+
+    /* ---- Utility ---- */
+    .hidden { display: none !important; }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .hero-brand { font-size: 1.6rem; }
+      .map-card-header { flex-direction: column; align-items: flex-start; }
+      .form-select { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <ellipse cx="18" cy="18" rx="14" ry="11" fill="#86efac" stroke="#16a34a" stroke-width="2.2" transform="rotate(-35 18 18)"/>
+          <line x1="8" y1="28" x2="28" y2="8" stroke="#15803d" stroke-width="2" stroke-linecap="round"/>
+          <line x1="18" y1="18" x2="13" y2="23" stroke="#15803d" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="18" y1="18" x2="23" y2="13" stroke="#15803d" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="hero-brand">Plant Triage</span>
+      </div>
+      <p class="hero-subtitle">Disease Outbreak Map &mdash; Mississippi Admin Dashboard</p>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Reports</div>
+        <div class="stat-value" id="statTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Counties Affected</div>
+        <div class="stat-value red" id="statCounties">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Viewing Disease</div>
+        <div class="stat-value green" id="statDisease" style="font-size:1rem; padding-top:0.3rem;">—</div>
+      </div>
+    </div>
+
+    <!-- Map card -->
+    <div class="map-card">
+      <div class="map-card-header">
+        <h2 class="map-card-title">Mississippi County Map</h2>
+        <div class="disease-select-wrap">
+          <label for="diseaseSelect">Disease:</label>
+          <select id="diseaseSelect" class="form-select">
+            <option value="Bacterial Blight">Bacterial Blight</option>
+            <option value="Curl Virus">Curl Virus</option>
+            <option value="Herbicide Growth Damage">Herbicide Growth Damage</option>
+            <option value="Leaf Hopper Jassids">Leaf Hopper Jassids</option>
+            <option value="Leaf Redding">Leaf Redding</option>
+            <option value="Leaf Variegation">Leaf Variegation</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot gray"></div>
+          <span>No reports</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot red"></div>
+          <span>1–4 reports</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot dark"></div>
+          <span>5+ reports</span>
+        </div>
+      </div>
+
+      <div id="map"></div>
+
+      <div class="map-status" id="mapStatus">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span id="mapStatusText">Loading data…</span>
+      </div>
+    </div>
+
+    <!-- Recent reports table -->
+    <div class="table-card">
+      <div class="table-header">
+        <h3 class="table-title">Recent Reports</h3>
+        <span class="badge-count" id="tableCount">0 reports</span>
+      </div>
+      <div id="tableBody">
+        <div class="empty-state">Loading reports…</div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <p>Plant Triage Admin &bull; Prototype v1.0</p>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ── Config ──────────────────────────────────────────
+    const JSONBIN_BIN_ID  = "69c4ec3bb7ec241ddca510d8";
+    const JSONBIN_API_KEY = "$2a$10$91AxsFlTwYO.kVHcntrxCOQOT6F.BZEEvyO.enPgQRsBd3ok/e1H2";
+    // ────────────────────────────────────────────────────
+
+    // DOM refs
+    const diseaseSelect  = document.getElementById("diseaseSelect");
+    const mapStatusText  = document.getElementById("mapStatusText");
+    const statTotal      = document.getElementById("statTotal");
+    const statCounties   = document.getElementById("statCounties");
+    const statDisease    = document.getElementById("statDisease");
+    const tableCount     = document.getElementById("tableCount");
+    const tableBody      = document.getElementById("tableBody");
+
+    // Map setup
+    const map = L.map("map").setView([32.7, -89.6], 7);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+
+    let geojsonLayer = null;
+    let allReports   = [];
+    let geojsonData  = null;
+
+    // Count reports for a county + disease
+    function getCount(countyName, disease) {
+      const clean = countyName.replace(" County", "").trim().toLowerCase();
+      return allReports.filter(r =>
+        r.county.toLowerCase() === clean && r.disease === disease
+      ).length;
+    }
+
+    // Color scale based on count
+    function fillColor(count) {
+      if (count === 0) return "#d1d5db";
+      if (count < 5)  return "#ef4444";
+      return "#991b1b";
+    }
+
+    // Render map for selected disease
+    function renderMap(disease) {
+      if (!geojsonData) return;
+      if (geojsonLayer) map.removeLayer(geojsonLayer);
+
+      let affectedCounties = 0;
+      let totalForDisease  = 0;
+
+      geojsonLayer = L.geoJSON(geojsonData, {
+        style: feature => {
+          const count = getCount(feature.properties.NAME, disease);
+          if (count > 0) affectedCounties++;
+          totalForDisease += count;
+          return {
+            weight: 1.2,
+            color: "#6b7280",
+            fillOpacity: 0.75,
+            fillColor: fillColor(count)
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const name  = feature.properties.NAME;
+          const count = getCount(name, disease);
+          layer.bindTooltip(
+            `<strong>${name} County</strong><br>` +
+            (count > 0
+              ? `<span style="color:#dc2626;font-weight:600;">⚠ ${count} report${count > 1 ? "s" : ""}</span>`
+              : `<span style="color:#6b7280;">No reports</span>`),
+            { sticky: true, className: "map-tooltip" }
+          );
+          layer.on("mouseover", function() { this.setStyle({ weight: 2.5, color: "#374151" }); });
+          layer.on("mouseout",  function() { geojsonLayer.resetStyle(this); });
+        }
+      }).addTo(map);
+
+      // Update stats
+      statDisease.textContent  = disease;
+      statCounties.textContent = affectedCounties;
+      mapStatusText.textContent = totalForDisease > 0
+        ? `${totalForDisease} report${totalForDisease > 1 ? "s" : ""} of ${disease} across ${affectedCounties} county${affectedCounties > 1 ? "ies" : ""}.`
+        : `No reports yet for ${disease}.`;
+    }
+
+    // Render recent reports table
+    function renderTable() {
+      const sorted = [...allReports].sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      ).slice(0, 50);
+
+      tableCount.textContent = `${allReports.length} report${allReports.length !== 1 ? "s" : ""}`;
+
+      if (sorted.length === 0) {
+        tableBody.innerHTML = `<div class="empty-state">No reports submitted yet.</div>`;
+        return;
+      }
+
+      tableBody.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>County</th>
+              <th>Disease</th>
+              <th>Date &amp; Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted.map((r, i) => `
+              <tr>
+                <td style="color:var(--gray-400)">${allReports.length - i}</td>
+                <td><strong>${r.county}</strong> County</td>
+                <td><span class="disease-pill ${r.disease === 'Healthy Leaf' ? 'healthy' : ''}">${r.disease}</span></td>
+                <td style="color:var(--gray-500)">${new Date(r.timestamp).toLocaleString()}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>`;
+    }
+
+    // Load everything
+    async function init() {
+      try {
+        // Load GeoJSON
+        const geoRes    = await fetch("assets/ms_counties.geojson");
+        geojsonData     = await geoRes.json();
+        mapStatusText.textContent = "Fetching reports…";
+
+        // Load reports from JSONBin
+        const binRes  = await fetch(
+          `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`,
+          { headers: { "X-Master-Key": JSONBIN_API_KEY } }
+        );
+        const binData = await binRes.json();
+        allReports    = binData.record.reports || [];
+
+        statTotal.textContent = allReports.length;
+
+        renderMap(diseaseSelect.value);
+        renderTable();
+
+      } catch (err) {
+        mapStatusText.textContent = "Error loading data: " + err.message;
+        console.error(err);
+      }
+    }
+
+    diseaseSelect.addEventListener("change", e => renderMap(e.target.value));
+
+    // Auto-refresh every 60 seconds
+    init();
+    setInterval(init, 60000);
+  </script>
+</body>
+</html>

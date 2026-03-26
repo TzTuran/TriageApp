@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LeafDetect – Cotton Disease Scanner</title>
+  <title>Plant Triage – Cotton Disease Detection</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="On-device cotton leaf disease detection powered by MobileNetV2 and TensorFlow.js">
+  <meta name="description" content="Plant Triage – AI-powered cotton leaf disease detection in your browser.">
   <meta name="theme-color" content="#16a34a">
-
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="stylesheet" href="styles/main.css">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -26,9 +25,15 @@
           <line x1="18" y1="18" x2="13" y2="23" stroke="#15803d" stroke-width="1.8" stroke-linecap="round"/>
           <line x1="18" y1="18" x2="23" y2="13" stroke="#15803d" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
-        <span class="hero-brand">LeafDetect</span>
+        <span class="hero-brand">Plant Triage</span>
       </div>
       <p class="hero-subtitle">Cotton Leaf Disease Scanner &mdash; 100% on-device &amp; private</p>
+    </div>
+
+    <!-- PWA install banner -->
+    <div id="installBanner" class="install-banner hidden">
+      <span>Install for offline use</span>
+      <button id="installBtn" class="install-btn">Install</button>
     </div>
   </header>
 
@@ -40,7 +45,7 @@
       <span id="statusText">Loading AI model&hellip;</span>
     </div>
 
-    <!-- Upload Card -->
+    <!-- Step 1: Upload -->
     <section class="card">
       <div class="card-header">
         <div class="step-badge">1</div>
@@ -77,14 +82,14 @@
       </button>
     </section>
 
-    <!-- Results Card -->
-    <section class="card" id="resultsCard">
+    <!-- Step 2: Results -->
+    <section class="card">
       <div class="card-header">
         <div class="step-badge">2</div>
         <h2>Detection Result</h2>
       </div>
 
-      <!-- Idle state -->
+      <!-- Idle -->
       <div id="resultIdle" class="result-idle">
         <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#d1d5db" stroke-width="1.2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .23 2.71-1.17 2.71H3.968c-1.4 0-2.17-1.71-1.17-2.71L4.2 15.3"/>
@@ -92,15 +97,15 @@
         <p>Upload an image and click <strong>Analyze Leaf</strong> to see results here.</p>
       </div>
 
-      <!-- Analyzing spinner -->
+      <!-- Spinner -->
       <div id="resultSpinner" class="result-spinner hidden">
         <div class="spinner"></div>
         <p>Running inference&hellip;</p>
       </div>
 
-      <!-- Result output -->
+      <!-- Output -->
       <div id="resultOutput" class="result-output hidden">
-        <div class="result-top">
+        <div class="result-top" id="resultTop">
           <div id="resultIcon" class="result-icon"></div>
           <div>
             <p class="result-label-text">Detected</p>
@@ -111,20 +116,42 @@
             <p id="resultConf" class="result-conf"></p>
           </div>
         </div>
-
         <div class="confidence-bars" id="confidenceBars"></div>
       </div>
 
-      <!-- Error state -->
+      <!-- Error -->
       <div id="resultError" class="result-error hidden">
-        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#ef4444" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
         </svg>
         <p id="resultErrorMsg">Something went wrong. Please try again.</p>
       </div>
     </section>
 
-    <!-- Info Card -->
+    <!-- Step 3: Report (hidden until detection done) -->
+    <section class="card hidden" id="reportSection">
+      <div class="card-header">
+        <div class="step-badge step-badge-red">3</div>
+        <h2>Report Outbreak</h2>
+      </div>
+      <p class="card-desc">Help track disease spread across Mississippi. Select your county and submit a report — it will appear on the admin map.</p>
+
+      <label class="form-label" for="countySelect">Your county</label>
+      <select id="countySelect" class="form-select">
+        <option value="" disabled selected>— Choose a county —</option>
+      </select>
+
+      <button id="reportBtn" class="primary-btn report-btn" style="margin-top:1rem;">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+        <span>Send Report</span>
+      </button>
+
+      <div id="reportStatus" class="report-status hidden"></div>
+    </section>
+
+    <!-- Info card -->
     <section class="card info-card">
       <h3 class="info-title">How it works</h3>
       <div class="info-grid">
@@ -132,7 +159,7 @@
           <span class="info-icon">🧠</span>
           <div>
             <strong>MobileNetV2 Model</strong>
-            <p>Trained on the SAR-CLD-2024 cotton leaf disease dataset for 4-class classification.</p>
+            <p>Trained on the SAR-CLD-2024 cotton leaf disease dataset for 7-class classification.</p>
           </div>
         </div>
         <div class="info-item">
@@ -152,8 +179,8 @@
         <div class="info-item">
           <span class="info-icon">🌿</span>
           <div>
-            <strong>4 Classes</strong>
-            <p>Diseased leaf, Diseased plant, Fresh leaf, Fresh plant.</p>
+            <strong>7 Disease Classes</strong>
+            <p>Bacterial Blight, Curl Virus, Healthy Leaf, Herbicide Growth Damage, Leaf Hopper Jassids, Leaf Redding, Leaf Variegation.</p>
           </div>
         </div>
       </div>
@@ -162,7 +189,7 @@
   </main>
 
   <footer class="footer">
-    <p>LeafDetect &bull; USM VR &amp; Multispectral Drone Lab &bull; Prototype v1.0</p>
+    <p>Plant Triage &bull; Turan© &bull; WPA Prototype v1.0</p>
   </footer>
 
   <script src="scripts/tf.min.js"></script>
