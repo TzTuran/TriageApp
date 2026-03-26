@@ -2,7 +2,7 @@
    LeafDetect – Service Worker (Full Offline)
    ========================================= */
 
-const CACHE_NAME = "leafdetect-v3";
+const CACHE_NAME = "leafdetect-v4";
 
 // Every file the app needs to work completely offline
 const ASSETS = [
@@ -46,16 +46,39 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch: serve from cache first, fall back to network
+// URLs that must ALWAYS be fetched live (never served from cache)
+const NEVER_CACHE = [
+  "jsonbin.io",          // report data API
+  "dashboard.html",      // admin dashboard always needs fresh data
+  "openstreetmap.org",   // map tiles
+  "unpkg.com",           // leaflet CDN
+];
+
+function shouldBypassCache(url) {
+  return NEVER_CACHE.some(pattern => url.includes(pattern));
+}
+
+// Fetch: network-first for live data, cache-first for app assets
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
+  const url = event.request.url;
+
+  // Always go to network for dashboard and API calls
+  if (shouldBypassCache(url)) {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // If network fails for dashboard, still try cache as fallback
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // Cache-first for everything else (app shell, model files, etc.)
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached; // Serve from cache (works offline)
-      }
-      // Not in cache — try network and cache the response
+      if (cached) return cached;
       return fetch(event.request).then((resp) => {
         if (resp && resp.status === 200) {
           const clone = resp.clone();
