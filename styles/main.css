@@ -674,3 +674,144 @@ body {
 .install-btn:hover {
   background: rgba(255,255,255,.3);
 }
+
+/* ---- Disease Info Card ---- */
+.severity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+}
+
+.severity-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-500);
+}
+
+.severity-badge {
+  padding: 0.25rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  letter-spacing: 0.03em;
+}
+
+.info-block {
+  margin-bottom: 1.25rem;
+}
+
+.info-block:last-child {
+  margin-bottom: 0;
+}
+
+.info-block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.info-block-header h4 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.info-block-header svg {
+  color: var(--gray-500);
+  flex-shrink: 0;
+}
+
+.info-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.info-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  color: var(--gray-700);
+  line-height: 1.55;
+}
+
+.info-list-item::before {
+  content: "✓";
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--green-600);
+  background: var(--green-50);
+  border: 1px solid var(--green-200);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* ---- Pesticide Cards ---- */
+.pesticides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pesticide-card {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  transition: border-color 0.15s;
+}
+
+.pesticide-card:hover {
+  border-color: var(--gray-300);
+}
+
+.pesticide-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.pesticide-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.pesticide-type {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--green-700);
+  background: var(--green-50);
+  border: 1px solid var(--green-200);
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pesticide-note {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+  line-height: 1.5;
+}

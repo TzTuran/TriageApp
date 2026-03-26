@@ -15,6 +15,111 @@ const CLASSES = [
   { label: "Leaf Variegation",        isDiseased: true  },
 ];
 
+// =========================================
+// Disease information database
+// =========================================
+const DISEASE_INFO = {
+  "Bacterial Blight": {
+    severity: "High",
+    severityColor: "#ef4444",
+    prevention: [
+      "Use certified disease-free seeds before planting",
+      "Rotate crops — avoid planting cotton in the same field consecutively",
+      "Remove and destroy infected plant debris after harvest",
+      "Plant resistant varieties where available"
+    ],
+    pesticides: [
+      { name: "Copper Hydroxide (Kocide)",   type: "Bactericide",          note: "Apply at first sign of infection" },
+      { name: "Copper Oxychloride",           type: "Bactericide",          note: "Preventive foliar spray" },
+      { name: "Streptomycin Sulfate",         type: "Antibiotic bactericide", note: "Use sparingly to avoid resistance" }
+    ]
+  },
+  "Curl Virus": {
+    severity: "High",
+    severityColor: "#ef4444",
+    prevention: [
+      "Plant virus-resistant or tolerant cotton varieties",
+      "Remove and burn infected plants immediately to prevent spread",
+      "Avoid planting near other susceptible crops like tomatoes",
+      "Use reflective mulches to deter whitefly vectors"
+    ],
+    pesticides: [
+      { name: "Imidacloprid (Admire Pro)",  type: "Systemic insecticide",    note: "Controls whitefly vector — apply early season" },
+      { name: "Dinotefuran (Scorpion)",      type: "Insecticide",             note: "Effective against whitefly populations" },
+      { name: "Spiromesifen (Oberon)",       type: "Insecticide/Miticide",    note: "Use in rotation to prevent resistance" }
+    ]
+  },
+  "Healthy Leaf": {
+    severity: "None",
+    severityColor: "#10b981",
+    prevention: [
+      "Continue regular field scouting to catch early signs",
+      "Maintain proper irrigation and fertilization schedules",
+      "Keep field free of weeds that can host pests and disease"
+    ],
+    pesticides: []
+  },
+  "Herbicide Growth Damage": {
+    severity: "Medium",
+    severityColor: "#f59e0b",
+    prevention: [
+      "Calibrate sprayers carefully before herbicide application",
+      "Avoid spraying during windy conditions to prevent drift",
+      "Use herbicides labeled safe for cotton at recommended rates",
+      "Scout fields 5–7 days after application to catch damage early"
+    ],
+    pesticides: [
+      { name: "No pesticide treatment",              type: "Cultural remedy",            note: "Apply foliar gibberellic acid (GA3) to aid recovery in mild cases" },
+      { name: "Cytokinin-based growth stimulants",   type: "Plant growth regulator",     note: "Helps stimulate new growth after damage" }
+    ]
+  },
+  "Leaf Hopper Jassids": {
+    severity: "Medium",
+    severityColor: "#f59e0b",
+    prevention: [
+      "Plant hairy-leaf cotton varieties — jassids avoid them naturally",
+      "Use yellow sticky traps to monitor and reduce adult populations",
+      "Avoid excessive nitrogen fertilizer — it attracts jassids",
+      "Scout when 2+ nymphs per leaf are found with visible damage"
+    ],
+    pesticides: [
+      { name: "Flonicamid (Carbine 50WG)",      type: "Insecticide",          note: "Best results against cotton jassids" },
+      { name: "Thiamethoxam (Centric 40WG)",     type: "Systemic insecticide", note: "Effective systemic option" },
+      { name: "Sulfoxaflor (Transform WG)",      type: "Insecticide",          note: "Good efficacy — rotate to prevent resistance" },
+      { name: "Flupyradifurone (Sivanto Prime)", type: "Insecticide",          note: "⚠️ Avoid pyrethroids — not effective on jassids" }
+    ]
+  },
+  "Leaf Redding": {
+    severity: "Medium",
+    severityColor: "#f59e0b",
+    prevention: [
+      "Ensure adequate potassium and phosphorus levels in the soil",
+      "Avoid water stress — maintain consistent irrigation",
+      "Test soil before planting to correct nutrient deficiencies early",
+      "Monitor plants post-flowering when redding is most common"
+    ],
+    pesticides: [
+      { name: "No direct pesticide",        type: "Nutritional remedy",  note: "Apply potassium foliar sprays (0-0-25 SOP) to correct deficiency" },
+      { name: "Phosphoric acid fertilizer", type: "Soil amendment",       note: "Corrects phosphorus deficiency linked to redding" }
+    ]
+  },
+  "Leaf Variegation": {
+    severity: "Low",
+    severityColor: "#3b82f6",
+    prevention: [
+      "Check for and control aphid or mite populations",
+      "Ensure balanced micronutrient supply, especially magnesium and iron",
+      "Use clean, certified planting material free from viral contamination",
+      "Avoid mechanical injury to plants during field operations"
+    ],
+    pesticides: [
+      { name: "Abamectin (Agri-Mek)",       type: "Miticide/Insecticide",   note: "Controls mites that cause variegation symptoms" },
+      { name: "Spirotetramat (Movento)",     type: "Systemic insecticide",   note: "Controls aphid populations causing mosaic patterns" },
+      { name: "Imidacloprid (Provado)",      type: "Systemic insecticide",   note: "Broad-spectrum vector control" }
+    ]
+  }
+};
+
 const JSONBIN_BIN_ID  = "69c4ec3bb7ec241ddca510d8";
 const JSONBIN_API_KEY = "$2a$10$91AxsFlTwYO.kVHcntrxCOQOT6F.BZEEvyO.enPgQRsBd3ok/e1H2";
 
@@ -52,7 +157,12 @@ const resultIcon     = document.getElementById("resultIcon");
 const resultLabel    = document.getElementById("resultLabel");
 const resultConf     = document.getElementById("resultConf");
 const confidenceBars = document.getElementById("confidenceBars");
-const reportSection  = document.getElementById("reportSection");
+const diseaseInfoSection = document.getElementById("diseaseInfoSection");
+const severityBadge      = document.getElementById("severityBadge");
+const preventionList     = document.getElementById("preventionList");
+const pesticidesList     = document.getElementById("pesticidesList");
+const pesticidesBlock    = document.getElementById("pesticidesBlock");
+const reportSection      = document.getElementById("reportSection");
 const countySelect   = document.getElementById("countySelect");
 const reportBtn      = document.getElementById("reportBtn");
 const reportStatus   = document.getElementById("reportStatus");
@@ -119,7 +229,8 @@ function preprocess(imgEl) {
 async function predict() {
   if (!model || !imageReady) return;
 
-  // Hide report section on re-analysis
+  // Hide info/report sections on re-analysis
+  diseaseInfoSection.classList.add("hidden");
   reportSection.classList.add("hidden");
   reportStatus.classList.add("hidden");
   reportStatus.textContent = "";
@@ -145,7 +256,8 @@ async function predict() {
     renderResult(probs, maxIdx);
     showResultState("output");
 
-    // Show report section after detection
+    // Show disease info + report section after detection
+    renderDiseaseInfo(lastDetectedDisease);
     reportSection.classList.remove("hidden");
     setTimeout(() => {
       reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -198,6 +310,52 @@ function renderResult(probs, topIdx) {
 }
 
 // =========================================
+// Disease info panel
+// =========================================
+function renderDiseaseInfo(label) {
+  const info = DISEASE_INFO[label];
+  if (!info) { diseaseInfoSection.classList.add("hidden"); return; }
+
+  // Severity badge
+  severityBadge.textContent = info.severity;
+  severityBadge.style.background = severityBadgeBackground(info.severity);
+  severityBadge.style.color      = severityBadgeColor(info.severity);
+  severityBadge.style.borderColor = info.severityColor + "55";
+
+  // Prevention list
+  preventionList.innerHTML = info.prevention
+    .map(p => `<li class="info-list-item">${p}</li>`)
+    .join("");
+
+  // Pesticides / remedies
+  if (info.pesticides.length === 0) {
+    pesticidesBlock.classList.add("hidden");
+  } else {
+    pesticidesBlock.classList.remove("hidden");
+    pesticidesList.innerHTML = info.pesticides.map(p => `
+      <div class="pesticide-card">
+        <div class="pesticide-top">
+          <span class="pesticide-name">${p.name}</span>
+          <span class="pesticide-type">${p.type}</span>
+        </div>
+        <p class="pesticide-note">${p.note}</p>
+      </div>`).join("");
+  }
+
+  diseaseInfoSection.classList.remove("hidden");
+}
+
+function severityBadgeBackground(severity) {
+  const map = { High: "#fef2f2", Medium: "#fffbeb", Low: "#eff6ff", None: "#f0fdf4" };
+  return map[severity] || "#f3f4f6";
+}
+
+function severityBadgeColor(severity) {
+  const map = { High: "#b91c1c", Medium: "#92400e", Low: "#1d4ed8", None: "#15803d" };
+  return map[severity] || "#374151";
+}
+
+// =========================================
 // Result state machine
 // =========================================
 function showResultState(state) {
@@ -242,6 +400,7 @@ clearBtn.addEventListener("click", () => {
   previewWrap.classList.add("hidden");
   uploadZone.classList.remove("hidden");
   showResultState("idle");
+  diseaseInfoSection.classList.add("hidden");
   reportSection.classList.add("hidden");
 });
 
